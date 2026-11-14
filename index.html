@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="neon-carbon">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05080c">
+  <meta name="description" content="GX 444 — Educational Random-Number Simulator powered by Web Crypto API.">
+  <title>GX 444 — Random-Number Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="confirm-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <span class="badge badge-warn">CONFIRM ACTION</span>
+        <h2 id="modal-title">Are you sure?</h2>
+      </div>
+      <p id="modal-message" class="modal-message"></p>
+      <div class="modal-actions">
+        <button type="button" id="modal-cancel-btn" class="btn btn-secondary">CANCEL</button>
+        <button type="button" id="modal-confirm-btn" class="btn btn-danger">CONFIRM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO ACCESS LOCK SCREEN -->
+  <main id="login-screen" class="login-screen">
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="brand-lockup">
+        <div class="brand-emblem" aria-hidden="true">GX</div>
+        <div>
+          <h1 id="login-title" class="brand-title">GX 444</h1>
+          <p class="brand-subtitle">EDUCATIONAL RNG SIMULATOR</p>
+        </div>
+      </div>
+
+      <div class="demo-notice" role="note">
+        <strong>Demo Access Lock Notice:</strong> This static login screen is a client-side UI demo lock only — not secure server-side authentication.
+      </div>
+
+      <form id="login-form" class="login-form" novalidate>
+        <label for="login-password" class="input-label">Demo Passcode</label>
+        <div class="password-wrapper">
+          <input
+            type="password"
+            id="login-password"
+            class="text-input"
+            placeholder="Enter demo passcode"
+            autocomplete="current-password"
+            required
+          >
+          <button
+            type="button"
+            id="toggle-password-btn"
+            class="toggle-pw-btn"
+            aria-label="Show password"
+            aria-pressed="false"
+          >
+            SHOW
+          </button>
+        </div>
+
+        <p class="passcode-hint">
+          Default Demo Passcode: <code>GX444</code>
+        </p>
+
+        <p id="login-error" class="error-msg" role="alert" hidden></p>
+
+        <button type="submit" id="login-submit-btn" class="btn btn-primary btn-glow btn-full">
+          LOGIN TO GX 444
+        </button>
+      </form>
+
+      <footer class="login-footer">
+        <p>Uses <code>crypto.getRandomValues()</code> locally on your device. No external prediction APIs. No Period ID tracking.</p>
+      </footer>
+    </section>
+  </main>
+
+  <!-- MAIN APPLICATION SHELL -->
+  <div id="app-shell" class="app-shell" hidden>
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="top-bar-inner">
+        <div class="top-brand">
+          <span class="brand-emblem-sm" aria-hidden="true">GX</span>
+          <div>
+            <span class="top-brand-name">GX 444</span>
+            <span class="top-brand-tag">DEMO SIMULATOR</span>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <span class="live-pill">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            LOCAL RNG
+          </span>
+          <button type="button" id="logout-btn" class="btn btn-ghost btn-sm" aria-label="Lock demo session">
+            LOCK
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <!-- DASHBOARD / WIN SECTION -->
+      <section id="dashboard-section" class="section-block" aria-labelledby="win-section-heading">
+        <!-- Win Section Banner -->
+        <div class="win-banner">
+          <div class="win-banner-left">
+            <span class="badge badge-neon">GX 444 // WIN SECTION</span>
+            <h1 id="win-section-heading" class="win-heading">GX 444 Random Simulator</h1>
+            <p class="win-subtext">
+              Transparent educational simulation using local Web Crypto randomness. Results are demo-only and do not predict real outcomes.
+            </p>
+          </div>
+          <div class="win-banner-meta">
+            <span class="engine-chip">CRYPTO RNG</span>
+            <span class="engine-chip">0–9 RANGE</span>
+          </div>
+        </div>
+
+        <!-- Privacy Shield Overlay (shown when HIDE is active) -->
+        <div id="privacy-shield" class="card privacy-shield" hidden>
+          <span class="badge badge-cyan">DISPLAY HIDDEN</span>
+          <p>Signal and Number outputs are hidden. Tap <strong>SHOW</strong> below to reveal them.</p>
+        </div>
+
+        <!-- Signal & Number Cards Grid -->
+        <div id="simulator-cards" class="cards-grid">
+          <!-- SIGNAL CARD -->
+          <article class="card signal-card" aria-live="polite">
+            <div class="card-top-row">
+              <span class="card-label">SIGNAL</span>
+              <span id="signal-status-pill" class="status-pill status-waiting">
+                <span class="status-dot" aria-hidden="true"></span>
+                <span id="signal-status-text">WAITING</span>
+              </span>
+            </div>
+
+            <div class="signal-main">
+              <div id="signal-display" class="signal-value state-waiting">WAITING</div>
+              <p id="signal-caption" class="signal-caption">
+                Press REFRESH or wait for countdown to generate a demo result.
+              </p>
+            </div>
+
+            <div class="card-footer-note">
+              <span>Mode: Educational Demo</span>
+              <span id="signal-timestamp">--:--:--</span>
+            </div>
+          </article>
+
+          <!-- NUMBER CARD -->
+          <article class="card number-card" aria-live="polite">
+            <div class="card-top-row">
+              <span class="card-label">NUMBER (0–9)</span>
+              <span id="classification-badge" class="class-badge class-neutral">STANDBY</span>
+            </div>
+
+            <div class="number-stage">
+              <div id="number-display" class="glow-number state-waiting">—</div>
+            </div>
+
+            <div class="classification-legend">
+              <span class="legend-item"><strong class="text-cyan">SMALL</strong> = 0–4</span>
+              <span class="legend-sep">•</span>
+              <span class="legend-item"><strong class="text-neon">BIG</strong> = 5–9</span>
+            </div>
+          </article>
+        </div>
+
+        <!-- TIMER CARD -->
+        <article class="card timer-card">
+          <div class="timer-top">
+            <div>
+              <span class="card-label">SIMULATION COUNTDOWN</span>
+              <p class="timer-sublabel">Local 30s cycle (not synced to any external game)</p>
+            </div>
+            <div class="timer-readout-wrap">
+              <span id="timer-display" class="timer-readout">30s</span>
+              <button type="button" id="timer-toggle-btn" class="btn btn-secondary btn-sm">
+                PAUSE
+              </button>
+            </div>
+          </div>
+
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="30" aria-valuenow="30" id="timer-progressbar">
+            <div id="timer-progress-fill" class="progress-fill" style="width: 100%;"></div>
+          </div>
+        </article>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-grid" role="group" aria-label="Simulator Controls">
+          <button type="button" id="btn-hide" class="action-btn">
+            <span class="action-icon" aria-hidden="true">👁</span>
+            <span id="btn-hide-label">HIDE</span>
+          </button>
+
+          <button type="button" id="btn-history" class="action-btn">
+            <span class="action-icon" aria-hidden="true">☰</span>
+            <span>HISTORY</span>
+          </button>
+
+          <button type="button" id="btn-refresh" class="action-btn action-btn-primary">
+            <span class="action-icon" aria-hidden="true">↻</span>
+            <span>REFRESH</span>
+          </button>
+
+          <button type="button" id="btn-reset" class="action-btn action-btn-warn">
+            <span class="action-icon" aria-hidden="true">↺</span>
+            <span>RESET</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- HISTORY SECTION -->
+      <section id="history-section" class="section-block" aria-labelledby="history-heading">
+        <div class="section-header">
+          <div>
+            <span class="badge badge-cyan">DEMO LOGS</span>
+            <h2 id="history-heading" class="section-title">Result History</h2>
+            <p class="section-subtitle">Showing latest 100 generated demo records saved in localStorage.</p>
+          </div>
+          <span id="history-count-badge" class="count-pill">0 Records</span>
+        </div>
+
+        <div class="card history-card">
+          <div class="history-toolbar">
+            <div class="search-box">
+              <label for="history-search" class="sr-only">Search history</label>
+              <input
+                type="search"
+                id="history-search"
+                class="text-input input-sm"
+                placeholder="Search number (0–9), BIG/SMALL, time..."
+              >
+            </div>
+
+            <div class="filter-group" role="group" aria-label="Filter history by classification">
+              <button type="button" class="filter-btn active" data-filter="ALL">ALL</button>
+              <button type="button" class="filter-btn" data-filter="BIG">BIG</button>
+              <button type="button" class="filter-btn" data-filter="SMALL">SMALL</button>
+            </div>
+
+            <div class="history-io-actions">
+              <button type="button" id="export-csv-btn" class="btn btn-secondary btn-sm">
+                EXPORT CSV
+              </button>
+              <button type="button" id="clear-history-btn" class="btn btn-danger btn-sm">
+                CLEAR
+              </button>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Number</th>
+                  <th>Type</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <tr>
+                  <td colspan="4" class="empty-cell">No demo results generated yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATISTICAL ANALYSIS SECTION -->
+      <section id="statistics-section" class="section-block" aria-labelledby="stats-heading">
+        <div class="section-header">
+          <div>
+            <span class="badge badge-neon">ANALYTICS</span>
+            <h2 id="stats-heading" class="section-title">Statistical Analysis</h2>
+            <p class="section-subtitle">Calculated strictly from your actual stored demo results.</p>
+          </div>
+        </div>
+
+        <div class="disclaimer-banner" role="note">
+          <strong>Statistical Disclaimer:</strong> Historical demo statistics describe past random outputs only and <strong>do not predict or influence future outcomes</strong>. Each number is independently generated.
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+          <div class="card kpi-card">
+            <span class="kpi-label">TOTAL RESULTS</span>
+            <strong id="stat-total" class="kpi-value">0</strong>
+          </div>
+          <div class="card kpi-card">
+            <span class="kpi-label">BIG (5–9)</span>
+            <strong id="stat-big" class="kpi-value text-neon">0 (0%)</strong>
+          </div>
+          <div class="card kpi-card">
+            <span class="kpi-label">SMALL (0–4)</span>
+            <strong id="stat-small" class="kpi-value text-cyan">0 (0%)</strong>
+          </div>
+          <div class="card kpi-card">
+            <span class="kpi-label">LONGEST STREAKS</span>
+            <strong id="stat-streaks" class="kpi-value kpi-value-sm">BIG: 0 | SMALL: 0</strong>
+          </div>
+        </div>
+
+        <!-- BIG vs SMALL Split Chart -->
+        <article class="card chart-card">
+          <div class="chart-header">
+            <h3>BIG vs SMALL Distribution</h3>
+            <span id="stat-current-streak" class="mini-badge">Streak: —</span>
+          </div>
+          <div class="split-bar" aria-label="BIG vs SMALL percentage bar">
+            <div id="split-bar-big" class="split-big" style="width: 50%;">50%</div>
+            <div id="split-bar-small" class="split-small" style="width: 50%;">50%</div>
+          </div>
+          <div class="split-legend">
+            <span><i class="dot dot-big"></i> BIG (5–9)</span>
+            <span><i class="dot dot-small"></i> SMALL (0–4)</span>
+          </div>
+        </article>
+
+        <!-- 0-9 Frequency Bar Chart -->
+        <article class="card chart-card">
+          <div class="chart-header">
+            <h3>Number Frequency (0–9)</h3>
+            <span class="mini-badge">Actual Counts</span>
+          </div>
+          <div id="number-freq-chart" class="freq-chart" aria-label="Frequency chart for digits 0 through 9"></div>
+        </article>
+
+        <!-- Recent 10 & Recent 50 -->
+        <div class="recent-grid">
+          <article class="card chart-card">
+            <div class="chart-header">
+              <h3>Recent 10 Results</h3>
+              <span class="mini-badge">Latest First</span>
+            </div>
+            <div id="recent-10-strip" class="recent-strip">
+              <span class="empty-note">No results yet.</span>
+            </div>
+          </article>
+
+          <article class="card chart-card">
+            <div class="chart-header">
+              <h3>Recent 50 Summary</h3>
+              <span id="recent-50-count" class="mini-badge">0 / 50</span>
+            </div>
+            <div id="recent-50-summary" class="recent-50-box">
+              <div class="recent-50-row">
+                <span>BIG (5–9)</span>
+                <strong id="recent-50-big" class="text-neon">0 (0%)</strong>
+              </div>
+              <div class="recent-50-row">
+                <span>SMALL (0–4)</span>
+                <strong id="recent-50-small" class="text-cyan">0 (0%)</strong>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- EMBEDDED WEBSITE SECTION -->
+      <section id="embed-section" class="section-block" aria-labelledby="embed-heading">
+        <div class="section-header">
+          <div>
+            <span class="badge badge-cyan">EXTERNAL PORTAL</span>
+            <h2 id="embed-heading" class="section-title">External Website View</h2>
+            <p class="section-subtitle">Target: <code>https://dkwin9.com/</code></p>
+          </div>
+        </div>
+
+        <div class="card embed-card">
+          <div class="embed-notice">
+            <p>
+              <strong>Security &amp; Privacy Notice:</strong> External sites load directly from their own server only if they permit iframe embedding. GX 444 does not bypass <code>X-Frame-Options</code> or CSP restrictions and never collects or stores external credentials.
+            </p>
+            <div class="embed-actions">
+              <a
+                href="https://dkwin9.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-primary btn-glow"
+              >
+                OPEN WEBSITE ↗
+              </a>
+              <button type="button" id="toggle-embed-btn" class="btn btn-secondary">
+                LOAD PREVIEW
+              </button>
+            </div>
+          </div>
+
+          <div id="embed-stage" class="embed-stage">
+            <div id="embed-placeholder" class="embed-message">
+              <p class="embed-msg-title">Preview Not Loaded</p>
+              <p class="embed-msg-body">
+                Tap <strong>LOAD PREVIEW</strong> to test if <code>dkwin9.com</code> allows iframe embedding, or tap <strong>OPEN WEBSITE</strong> to visit it directly in a new tab.
+              </p>
+            </div>
+
+            <div id="embed-blocked-msg" class="embed-message embed-blocked" hidden>
+              <p class="embed-msg-title">Embedding Blocked or Unavailable</p>
+              <p class="embed-msg-body">
+                This website restricts iframe embedding via browser security policies (such as <code>X-Frame-Options</code> or <code>Content-Security-Policy</code>), or failed to respond. Please use the <strong>OPEN WEBSITE</strong> button above to open it externally.
+              </p>
+            </div>
+
+            <iframe
+              id="external-iframe"
+              class="external-iframe"
+              title="External website preview for dkwin9.com"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              referrerpolicy="no-referrer"
+              loading="lazy"
+              hidden
+            ></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS SECTION -->
+      <section id="settings-section" class="section-block" aria-labelledby="settings-heading">
+        <div class="section-header">
+          <div>
+            <span class="badge badge-neon">PREFERENCES</span>
+            <h2 id="settings-heading" class="section-title">Settings</h2>
+            <p class="section-subtitle">Customize GX 444 feedback, theme, and local storage.</p>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Sound Effects</div>
+              <div class="setting-desc">Synthesized Web Audio tones on result generation &amp; button taps.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-sound">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Vibration Feedback</div>
+              <div class="setting-desc" id="vibration-support-note">Haptic pulse on supported Android devices.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-vibration">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <div class="setting-name">Dark Theme Profile</div>
+              <div class="setting-desc">Choose your preferred dark gaming palette.</div>
+            </div>
+            <select id="setting-theme" class="select-input" aria-label="Select dark theme">
+              <option value="neon-carbon">Neon Carbon (Dark)</option>
+              <option value="oled-obsidian">OLED Obsidian (Pure Black)</option>
+            </select>
+          </div>
+
+          <div class="setting-row setting-row-actions">
+            <div>
+              <div class="setting-name">Data Management</div>
+              <div class="setting-desc">Clear saved demo history or reset all GX 444 demo data.</div>
+            </div>
+            <div class="setting-btn-group">
+              <button type="button" id="settings-clear-history-btn" class="btn btn-secondary btn-sm">
+                CLEAR HISTORY
+              </button>
+              <button type="button" id="settings-reset-all-btn" class="btn btn-danger btn-sm">
+                RESET DEMO DATA
+              </button>
+            </div>
+          </div>
+
+          <div class="about-box">
+            <h3>About GX 444</h3>
+            <p>
+              <strong>GX 444</strong> is an educational random-number and probability visualization tool. All numbers (0–9) and BIG/SMALL classifications are generated locally in your browser using <code>crypto.getRandomValues()</code>. It does not connect to any external game server, synchronize Period IDs, or predict real gambling outcomes.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Sticky Mobile Navigation -->
+    <nav class="bottom-nav" aria-label="Primary Navigation">
+      <a href="#dashboard-section" class="nav-item active" data-target="dashboard-section">
+        <span class="nav-icon" aria-hidden="true">⚡</span>
+        <span>Dashboard</span>
+      </a>
+      <a href="#history-section" class="nav-item" data-target="history-section">
+        <span class="nav-icon" aria-hidden="true">☰</span>
+        <span>History</span>
+      </a>
+      <a href="#statistics-section" class="nav-item" data-target="statistics-section">
+        <span class="nav-icon" aria-hidden="true">📊</span>
+        <span>Stats</span>
+      </a>
+      <a href="#embed-section" class="nav-item" data-target="embed-section">
+        <span class="nav-icon" aria-hidden="true">🌐</span>
+        <span>Website</span>
+      </a>
+      <a href="#settings-section" class="nav-item" data-target="settings-section">
+        <span class="nav-icon" aria-hidden="true">⚙</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </div>
+
+  <script defer src="random-engine.js"></script>
+  <script defer src="history.js"></script>
+  <script defer src="statistics.js"></script>
+  <script defer src="script.js"></script>
+</body>
+</html>
